@@ -47,18 +47,47 @@ def mount_drive():
 
 def install_dependencies():
     """Install required packages"""
+    # First uninstall conflicting packages
+    print("Cleaning up existing packages...")
+    packages_to_remove = ["numpy", "pandas", "tensorflow", "torch", "transformers", "datasets"]
+    for package in packages_to_remove:
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", package])
+            print(f"✅ Removed {package}")
+        except:
+            print(f"Note: {package} was not installed or couldn't be removed")
+    
+    # Install numpy first to ensure compatibility
+    print("Installing numpy...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy==1.23.5"])
+    print("✅ Installed numpy 1.23.5")
+    
+    # Install PyTorch with CUDA if available
+    print("Installing PyTorch...")
+    if torch.cuda.is_available():
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "torch==2.0.1+cu118", "torchvision==0.15.2+cu118", "--extra-index-url", "https://download.pytorch.org/whl/cu118"])
+            print("✅ Installed PyTorch with CUDA 11.8")
+        except subprocess.CalledProcessError:
+            print("❌ Failed to install PyTorch with CUDA 11.8")
+            return False
+    else:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "torch==2.0.1", "torchvision==0.15.2"])
+        print("✅ Installed PyTorch (CPU version)")
+    
+    # Install other dependencies with pinned versions
+    print("Installing other dependencies...")
     required_packages = [
+        "pandas==2.0.3",
         "transformers==4.30.0", 
         "datasets==2.13.0", 
         "pillow==9.5.0",
         "scikit-learn==1.2.2",
         "matplotlib==3.7.1",
-        "pandas==2.0.2",
         "tqdm==4.65.0",
         "wandb==0.15.4"
     ]
     
-    print("Installing required packages...")
     for package in required_packages:
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", package])
@@ -67,24 +96,21 @@ def install_dependencies():
             print(f"❌ Failed to install {package}")
             return False
     
-    # Install PyTorch with CUDA if available
-    if torch.cuda.is_available():
-        try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "torch==2.0.1+cu118", "torchvision==0.15.2+cu118", "--extra-index-url", "https://download.pytorch.org/whl/cu118"])
-            print("✅ Installed PyTorch with CUDA 11.8")
-        except subprocess.CalledProcessError:
-            print("❌ Failed to install PyTorch with CUDA 11.8")
-            return False
-    
     # Check installations
-    import transformers
-    import datasets
-    
-    print(f"✅ Using transformers v{transformers.__version__}")
-    print(f"✅ Using datasets v{datasets.__version__}")
-    print(f"✅ Using PyTorch v{torch.__version__}")
-    
-    return True
+    try:
+        import transformers
+        import datasets
+        import pandas
+        
+        print(f"✅ Using transformers v{transformers.__version__}")
+        print(f"✅ Using datasets v{datasets.__version__}")
+        print(f"✅ Using pandas v{pandas.__version__}")
+        print(f"✅ Using PyTorch v{torch.__version__}")
+        
+        return True
+    except ImportError as e:
+        print(f"❌ Failed to import required packages: {e}")
+        return False
 
 
 def update_config_for_colab():
